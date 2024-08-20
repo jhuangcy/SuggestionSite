@@ -1,0 +1,204 @@
+﻿@page "/details/{id}"
+@inject NavigationManager nav
+@inject AuthenticationStateProvider auth
+@inject IStatusService statusService
+@inject IUserService userService
+@inject ISuggestionService suggestionService
+
+<h1 class="text-uppercase text-center mb-4">Suggestion Details</h1>
+
+<div class="detail-form row justify-content-center">
+    <div class="form-layout col-lg-10 col-xl-8 p-4 bg-white">
+        @if (suggestion != null)
+        {
+            <div class="suggestion-detail-row row">
+                <div class="suggestion-detail col-11 p-0">
+                    <div>
+                        <div class="d-flex flex-column justify-content-center text-center @GetVoteClass()" @onclick="Vote">
+                            <div class="text-uppercase">@GetVotesText1()</div>
+                            <span class="oi oi-caret-top fs-1"></span>
+                            <div class="text-uppercase">@GetVotesText2()</div>
+                        </div>
+                        <div class="text-center py-2">@suggestion.DateCreated.ToString("MM.dd.yyyy")</div>
+                    </div>
+                    <div class="d-flex flex-column pt-0 pe-3 pb-3 ps-4">
+                        <div class="suggestion-detail-name fw-bold fs-5 mb-2">@suggestion.Name</div>
+                        <div class="suggestion-detail-author mb-2">@suggestion.Author.DisplayName</div>
+
+                        @* Hidden on small devices *@
+                        <div class="suggestion-detail-desc mb-2 d-none d-md-block">@suggestion.Description</div>
+                        <div class="suggestion-entry-text-category text-uppercase d-none d-md-block">@suggestion.Category.Name</div>
+                    </div>
+                </div>
+                <div class="col-1 d-flex justify-content-end">
+                    <button class="btn-close" @onclick="ClosePage"></button>
+                </div>
+            </div>
+
+            @* Shown on small devices*@
+            <div class="row d-block d-md-none">
+                <div class="p-3 pt-0">
+                    <div class="suggestion-detail-desc mb-2">@suggestion.Description</div>
+                    <div class="suggestion-entry-text-category text-uppercase">@suggestion.Category.Name</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <h3 class="text-center text-black">The suggestion was not found</h3>
+        }
+    </div>
+</div>
+
+@if (suggestion?.Status != null)
+{
+    <div class="detail-form row justify-content-center">
+        <div class="suggestion-results form-layout col-lg-10 col-xl-8 p-0 mt-3 bg-white">
+            <div class="@GetStatusClass()"></div>
+            <div class="p-2 p-md-4">
+                <div class="suggestion-detail-name fw-bold fs-5 mb-2 flex-grow-1">@suggestion.Status.Name</div>
+                <div class="suggestion-detail-owner-notes pb-3">@((MarkupString)suggestion.Notes)</div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (suggestion != null)
+{
+    <AuthorizeView Policy="Admin">
+        <div class="detail-form row justify-content-center">
+            <div class="form-layout admin-details mt-3 p-4 bg-white col-lg-10 col-xl-8">
+                <div>
+                    <div class="suggestion-detail-name fw-bold fs-5 mb-2">Set Status</div>
+                    @if (string.IsNullOrWhiteSpace(status))
+                    {
+                        <div class="d-flex justify-content-evenly flex-wrap">
+                            <button class="suggestion-entry-text-category btn-status-completed btn border-0 bg-white py-0 px-3 text-uppercase d-flex flex-grow-0 align-items-end" @onclick="@(() => status = "completed")">completed</button>
+                            <button class="suggestion-entry-text-category btn-status-watching btn border-0 bg-white py-0 px-3 text-uppercase d-flex flex-grow-0 align-items-end" @onclick="@(() => status = "watching")">watching</button>
+                            <button class="suggestion-entry-text-category btn-status-upcoming btn border-0 bg-white py-0 px-3 text-uppercase d-flex flex-grow-0 align-items-end" @onclick="@(() => status = "upcoming")">upcoming</button>
+                            <button class="suggestion-entry-text-category btn-status-dismissed btn border-0 bg-white py-0 px-3 text-uppercase d-flex flex-grow-0 align-items-end" @onclick="@(() => status = "dismissed")">dismissed</button>
+                        </div>
+                    }
+                    else if (status == "completed")
+                    {
+                        <div>
+                            <input type="text" class="rounded-control form-control" @bind="url" placeholder="Url" aria-label="content url" />
+                            <div class="d-flex">
+                                <button class="btn-archive-confirm btn text-uppercase flex-grow-1" @onclick="SetStatus">Confirm</button>
+                                <button class="btn-archive-cancel btn text-uppercase flex-grow-1" @onclick="(() => status = null)">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex">
+                            <button class="btn-archive-confirm btn text-uppercase flex-grow-1" @onclick="SetStatus">Confirm</button>
+                            <button class="btn-archive-cancel btn text-uppercase flex-grow-1" @onclick="(() => status = null)">Cancel</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+}
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+
+    List<Status> statuses;
+
+    User user;
+    Suggestion suggestion;
+    string status = "";
+    string url = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        suggestion = await suggestionService.FindOneAsync(id);
+        user = await auth.GetUser(userService);
+        statuses = await statusService.FindAllAsync();
+    }
+
+    string GetVotesText1() => suggestion.Votes.Any() ? suggestion.Votes.Count.ToString("00") : suggestion.Author.Id == user?.Id ? "Awaiting" : "Click to";
+    string GetVotesText2() => suggestion.Votes.Count > 1 ? "Votes" : "Vote";
+
+    async Task Vote()
+    {
+        if (user != null)
+        {
+            if (suggestion.Author.Id == user.Id)
+                return;
+
+            if (!suggestion.Votes.Add(user.Id))
+                suggestion.Votes.Remove(user.Id);
+
+            await suggestionService.VoteAsync(suggestion.Id, user.Id);
+        }
+        else
+        {
+            nav.NavigateTo("/MicrosoftIdentity/Account/SignIn", true);
+        }
+    }
+
+    async Task SetStatus()
+    {
+        switch (status)
+        {
+            case "completed":
+                if (string.IsNullOrWhiteSpace(url)) return;
+                suggestion.Status = statuses.Where(s => s.Name.ToLower() == status.ToLower()).First();
+                suggestion.Notes = $"This is an important topic for developers! We created a resource about it here <a href='{url}' target='_blank'>{url}</a>.";
+                break;
+
+            case "watching":
+                suggestion.Status = statuses.Where(s => s.Name.ToLower() == status.ToLower()).First();
+                suggestion.Notes = "Interest in this suggestion is growing! If more people are interested, we may address this topic in an upcoming resource.";
+                break;
+
+            case "upcoming":
+                suggestion.Status = statuses.Where(s => s.Name.ToLower() == status.ToLower()).First();
+                suggestion.Notes = "Great suggestion! We have a resource in the pipeline to address this topic.";
+                break;
+
+            case "dismissed":
+                suggestion.Status = statuses.Where(s => s.Name.ToLower() == status.ToLower()).First();
+                suggestion.Notes = "Sometimes a good idea doesn't fit within our scope or vision. This is one of those ideas.";
+                break;
+
+            default:
+                return;
+        }
+
+        status = null;
+        await suggestionService.ReplaceOneAsync(suggestion);
+    }
+
+    void ClosePage() => nav.NavigateTo("/");
+
+    // Conditional apply css classes
+    string GetVoteClass()
+    {
+        if (suggestion.Votes == null || !suggestion.Votes.Any())
+            return "suggestion-detail-no-votes";
+        else if (suggestion.Votes.Contains(user?.Id))
+            return "suggestion-detail-voted";
+        else
+            return "suggestion-detail-not-voted";
+    }
+
+    string @GetStatusClass()
+    {
+        if (suggestion == null || suggestion.Status == null)
+            return "suggestion-detail-status-none";
+
+        return suggestion.Status.Name switch
+        {
+            "Completed" => "suggestion-detail-status-completed",
+            "Watching" => "suggestion-detail-status-watching",
+            "Upcoming" => "suggestion-detail-status-upcoming",
+            "Dismissed" => "suggestion-detail-status-dismissed",
+            _ => "suggestion-detail-status-none"
+        };
+    }
+}

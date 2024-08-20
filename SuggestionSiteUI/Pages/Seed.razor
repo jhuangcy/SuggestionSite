@@ -1,0 +1,78 @@
+﻿@page "/seed"
+@inject ICategoryService categoryService
+@inject IStatusService statusService
+@inject IUserService userService
+@inject ISuggestionService suggestionService
+
+<h3 class="mt-3">Seed Data</h3>
+
+<button class="btn btn-warning" disabled="@loading" @onclick="CreateCategories">Create Categories</button>
+<button class="btn btn-warning" disabled="@loading" @onclick="CreateStatuses">Create Statuses</button>
+<button class="btn btn-danger" disabled="@loading" @onclick="SeedSampleData">Seed Sample Data</button>
+
+@code {
+    bool loading = false;
+
+    async Task CreateCategories()
+    {
+        loading = true;
+
+        var categories = await categoryService.FindAllAsync();
+        if (categories.Any()) return;
+
+        categories = new List<Category>
+        {
+            new Category { Name = "Courses", Description = "Full paid courses" },
+            new Category { Name = "Dev Questions", Description = "Advice on being a developer" },
+            new Category { Name = "In-depth Tutorials", Description = "Deep-dive on how to use a technology" },
+            new Category { Name = "10-minute Training", Description = "Quick walkthrough on certain dev features" },
+            new Category { Name = "Other", Description = "Misc off-topic discussions" }
+        };
+        categories.ForEach(async c => await categoryService.InsertOneAsync(c));
+
+        loading = false;
+    }
+
+    async Task CreateStatuses()
+    {
+        loading = true;
+
+        var statuses = await statusService.FindAllAsync();
+        if (statuses.Any()) return;
+
+        statuses = new List<Status>
+        {
+            new Status { Name = "Completed", Description = "Suggestion was accepted and the corresponding item was created" },
+            new Status { Name = "Watching", Description = "Monitoring to see how much interest there is for the suggestion" },
+            new Status { Name = "Upcoming", Description = "Suggestion was accepted and the corresponding item will be released soon" },
+            new Status { Name = "Dismissed", Description = "Suggestion was rejected and no action will be taken" }
+        };
+        statuses.ForEach(async s => await statusService.InsertOneAsync(s));
+
+        loading = false;
+    }
+
+    async Task SeedSampleData()
+    {
+        loading = true;
+
+        var categories = await categoryService.FindAllAsync();
+        var statuses = await statusService.FindAllAsync();
+
+        var user = new User { ObjectIdentifier = "a", FirstName = "Tim", LastName = "Corey", DisplayName = "tcorey", Email = "tim@gmail.com" };
+        await userService.InsertOneAsync(user);
+        var found = await userService.FindOneFromAuthAsync(user.ObjectIdentifier);
+
+        var suggestions = new List<Suggestion>
+        {
+            new Suggestion { Name = "1st suggestion", Description = "Created by seed method", Approved = true, Category = categories[0], Author = new UserLite(found) },
+            new Suggestion { Name = "2nd suggestion", Description = "Created by seed method", Notes = "Notes for status", Approved = true, Category = categories[1], Status = statuses[0], Author = new UserLite(found) },
+            new Suggestion { Name = "3rd suggestion", Description = "Created by seed method", Notes = "Notes for status", Approved = true, Category = categories[2], Status = statuses[1], Author = new UserLite(found) },
+            new Suggestion { Name = "4th suggestion", Description = "Created by seed method", Notes = "Notes for status", Approved = true, Category = categories[3], Status = statuses[2], Author = new UserLite(found), Votes = new HashSet<string> { "a", "b", "c" } },
+            new Suggestion { Name = "5th suggestion", Description = "Created by seed method", Notes = "Notes for status", Approved = true, Category = categories[4], Status = statuses[3], Author = new UserLite(found), Votes = new HashSet<string> { "a", "b", "c", "d" } },
+        };
+        suggestions.ForEach(async s => await suggestionService.InsertOneAsync(s));
+
+        loading = false;
+    }
+}

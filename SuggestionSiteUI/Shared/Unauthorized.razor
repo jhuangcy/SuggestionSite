@@ -1,0 +1,20 @@
+﻿@* Not accessible through url *@
+@inject NavigationManager nav
+
+<div class="create-form row justify-content-center mt-3">
+    <div class="form-layout col-lg-10 col-xl-8 p-4 bg-white">
+        <div class="row">
+            <div class="col-11">
+                <div class="fw-bold fs-5 mb-2">Authorization Required</div>
+                <p>You are not authorized to access this section. Login is required to vote or submit suggestions, and only admins are able to manage suggestions.</p>
+            </div>
+            <div class="col-1 d-flex justify-content-end">
+                <button class="btn-close" @onclick="ClosePage"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    void ClosePage() => nav.NavigateTo("/");
+}

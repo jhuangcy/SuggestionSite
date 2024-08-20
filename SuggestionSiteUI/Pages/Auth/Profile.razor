@@ -1,0 +1,141 @@
+﻿@page "/profile"
+@attribute [Authorize]
+@inject NavigationManager nav
+@inject AuthenticationStateProvider auth
+@inject IUserService userService
+@inject ISuggestionService suggestionService
+
+<h1 class="text-uppercase text-center mb-4">My Profile</h1>
+
+<div class="row px-0 px-md-3 mb-3">
+    <div class="col-12 d-flex justify-content-end">
+        <button class="btn-close btn-close-white" @onclick="ClosePage"></button>
+    </div>
+</div>
+
+<div class="form-layout mb-3 p-4 bg-white">
+    <h2 class="text-black text-uppercase">My Account</h2>
+    <p class="mb-0 ps-3">
+        <a href="MicrosoftIdentity/Account/EditProfile">Edit Profile</a>
+    </p>
+</div>
+
+@if (approved?.Count > 0)
+{
+    <div class="form-layout mb-3 p-4 bg-white">
+        <h2 class="text-black text-uppercase">Approved Suggestions</h2>
+        <p class="mb-0 ps-3">These are your suggestions that are currently active</p>
+
+        @foreach (var s in approved)
+        {
+            <hr class="my-submission-separator" />
+            <div class="suggestion-name fw-bold fs-5">@s.Name</div>
+            <p class="mb-0 ps-3">@s.DateCreated.ToString("MM.dd.yyyy")</p>
+            <p class="mb-0 ps-3">Total Votes: @s.Votes.Count</p>
+            <p class="mb-0 ps-3">@s.Category.Name</p>
+            <p class="suggestion-desc mb-0 ps-3">@s.Description</p>
+            @if (s.Status != null)
+            {
+                <div class="fw-bold fs-5">@s.Status.Name</div>
+                <p class="mb-0 ps-3">@((MarkupString)s.Notes)</p>
+            }
+        }
+    </div>
+}
+
+@if (archived?.Count > 0)
+{
+    <div class="form-layout mb-3 p-4 bg-white">
+        <h2 class="text-black text-uppercase">Archived Suggestions</h2>
+        <p class="mb-0 ps-3">These are your suggestions that were active but did not gain any traction</p>
+
+        @foreach (var s in archived)
+        {
+            <hr class="my-submission-separator" />
+            <div class="suggestion-name fw-bold fs-5">@s.Name</div>
+            <p class="mb-0 ps-3">@s.DateCreated.ToString("MM.dd.yyyy")</p>
+            <p class="mb-0 ps-3">Total Votes: @s.Votes.Count</p>
+            <p class="mb-0 ps-3">@s.Category.Name</p>
+            <p class="suggestion-desc mb-0 ps-3">@s.Description</p>
+            @if (s.Status != null)
+            {
+                <div class="fw-bold fs-5">@s.Status.Name</div>
+                <p class="mb-0 ps-3">@((MarkupString)s.Notes)</p>
+            }
+        }
+    </div>
+}
+
+@if (pending?.Count > 0)
+{
+    <div class="form-layout mb-3 p-4 bg-white">
+        <h2 class="text-black text-uppercase">Pending Suggestions</h2>
+        <p class="mb-0 ps-3">These are your suggestions that have not yet been reviewed by the admins</p>
+
+        @foreach (var s in pending)
+        {
+            <hr class="my-submission-separator" />
+            <div class="suggestion-name fw-bold fs-5">@s.Name</div>
+            <p class="mb-0 ps-3">@s.DateCreated.ToString("MM.dd.yyyy")</p>
+            <p class="mb-0 ps-3">Total Votes: @s.Votes.Count</p>
+            <p class="mb-0 ps-3">@s.Category.Name</p>
+            <p class="suggestion-desc mb-0 ps-3">@s.Description</p>
+            @if (s.Status != null)
+            {
+                <div class="fw-bold fs-5">@s.Status.Name</div>
+                <p class="mb-0 ps-3">@((MarkupString)s.Notes)</p>
+            }
+        }
+    </div>
+}
+
+@if (rejected?.Count > 0)
+{
+    <div class="form-layout mb-3 p-4 bg-white">
+        <h2 class="text-black text-uppercase">Rejected Suggestions</h2>
+        <p class="mb-0 ps-3">These are your suggestions that were deemed to be not appropriate for the site</p>
+
+        @foreach (var s in rejected)
+        {
+            <hr class="my-submission-separator" />
+            <div class="suggestion-name fw-bold fs-5">@s.Name</div>
+            <p class="mb-0 ps-3">@s.DateCreated.ToString("MM.dd.yyyy")</p>
+            <p class="mb-0 ps-3">Total Votes: @s.Votes.Count</p>
+            <p class="mb-0 ps-3">@s.Category.Name</p>
+            <p class="suggestion-desc mb-0 ps-3">@s.Description</p>
+            @if (s.Status != null)
+            {
+                <div class="fw-bold fs-5">@s.Status.Name</div>
+                <p class="mb-0 ps-3">@((MarkupString)s.Notes)</p>
+            }
+        }
+    </div>
+}
+
+@code {
+    List<Suggestion> all;
+    List<Suggestion> approved;
+    List<Suggestion> archived;
+    List<Suggestion> pending;
+    List<Suggestion> rejected;
+    User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // user = await userService.FindOneFromAuthAsync("a");
+        user = await auth.GetUser(userService);
+
+        var suggestions = await suggestionService.FindAllFromUserAsync(user.Id);
+
+        if (user != null && suggestions != null)
+        {
+            all = suggestions.OrderByDescending(s => s.DateCreated).ToList();
+            approved = all.Where(s => s.Approved && !s.Archived && !s.Rejected).ToList();
+            archived = all.Where(s => s.Archived && !s.Rejected).ToList();
+            pending = all.Where(s => !s.Approved && !s.Rejected).ToList();
+            rejected = all.Where(s => s.Rejected).ToList();
+        }
+    }
+
+    void ClosePage() => nav.NavigateTo("/");
+}

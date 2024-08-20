@@ -1,0 +1,23 @@
+﻿@inherits LayoutComponentBase
+
+<PageTitle>SuggestionSiteUI</PageTitle>
+
+<div class="page">
+    @* <div class="sidebar">
+        <NavMenu />
+    </div> *@
+
+    <main class="container-xxl">
+        @* <div class="top-row px-4">
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        </div> *@
+
+        <div class="nav-links px-5 pt-3 text-center d-flex justify-content-end">
+            <AuthMenu></AuthMenu>
+        </div>
+
+        <article class="content pt-1">
+            @Body
+        </article>
+    </main>
+</div>

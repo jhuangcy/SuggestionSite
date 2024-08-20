@@ -1,0 +1,13 @@
+﻿@* Not accessible through url *@
+<AuthorizeView Policy="Admin">
+    <a href="/admin/manage" class="login-link ps-3">Admin</a>
+</AuthorizeView>
+<AuthorizeView>
+    <Authorized>
+        <a href="/profile" class="login-link ps-3">Profile</a>
+        <a href="MicrosoftIdentity/Account/SignOut" class="login-link ps-3">Logout</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="MicrosoftIdentity/Account/SignIn" class="login-link ps-3">Login or Sign Up</a>
+    </NotAuthorized>
+</AuthorizeView>
